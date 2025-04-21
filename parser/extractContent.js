@@ -1,5 +1,6 @@
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
+const customRules = require('./scrapingStrategies'); // Import site-specific scraping rules
 
 async function extractContent(url) {
   const fetch = (await import('node-fetch')).default;
@@ -13,14 +14,28 @@ async function extractContent(url) {
   const dom = new JSDOM(html, { url });
   const document = dom.window.document;
 
+  // Get the hostname from the URL to apply the site-specific rules
+  const hostname = new URL(url).hostname;
+
+  // Check if there are custom rules for this site
+  const rules = customRules[hostname];
+
+  let content;
+
+  if (rules) {
+    // Use site-specific selectors if available
+    const articleContent = document.querySelector(rules.articleSelector);
+    content = articleContent ? articleContent.querySelector(rules.contentSelector).innerHTML : '';
+  } else {
+    // Default content extraction if no specific rules are found
+    content = document.querySelector('article') || document.querySelector('main') || document.body;
+  }
+
+  // Clean the extracted content to remove unwanted sections
+  const cleanContent = cleanArticleContent(content.innerHTML);
+
   // Extract title
   const title = document.querySelector('title')?.textContent || 'No title available';
-
-  // Try extracting the main content by looking for <article>, <main>, or <body>
-  const content = document.querySelector('article') || document.querySelector('main') || document.body;
-
-  // Clean the content to remove unwanted sections like navigation, ads, and other elements
-  const cleanContent = cleanArticleContent(content.innerHTML);
 
   // Extract author, if available
   const authorMeta = document.querySelector('meta[name="author"]');
@@ -52,7 +67,7 @@ function cleanArticleContent(content) {
   const unwantedSelectors = [
     'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
   ];
-  
+
   unwantedSelectors.forEach(selector => {
     const elements = body.querySelectorAll(selector);
     elements.forEach(el => el.remove());
