@@ -13,17 +13,24 @@ async function extractContent(url) {
   const dom = new JSDOM(html, { url });
   const document = dom.window.document;
 
-  // Focus on extracting the main article body
+  // Extract title
+  const title = document.querySelector('title')?.textContent || 'No title available';
+
+  // Try extracting the main content by looking for <article>, <main>, or <body>
   const content = document.querySelector('article') || document.querySelector('main') || document.body;
 
-  // Clean the content to remove unnecessary sections like ads or navigation
+  // Clean the content to remove unwanted sections like navigation, ads, and other elements
   const cleanContent = cleanArticleContent(content.innerHTML);
 
-  const title = document.querySelector('title')?.textContent || '';
+  // Extract author, if available
   const authorMeta = document.querySelector('meta[name="author"]');
   const author = authorMeta ? authorMeta.getAttribute('content') : '';
+
+  // Extract publish date
   const dateMeta = document.querySelector('meta[property="article:published_time"], meta[name="pubdate"]');
   const date_published = dateMeta ? dateMeta.getAttribute('content') : '';
+
+  // Extract lead image URL
   const leadImageMeta = document.querySelector('meta[property="og:image"]');
   const lead_image_url = leadImageMeta ? leadImageMeta.getAttribute('content') : '';
 
@@ -36,18 +43,26 @@ async function extractContent(url) {
   };
 }
 
+// Function to clean the extracted HTML
 function cleanArticleContent(content) {
-  // Remove unwanted elements like scripts, ads, etc.
   const doc = new JSDOM(content);
   const body = doc.window.document.body;
 
-  // Remove elements like ads or navigation, if needed
-  const scripts = body.querySelectorAll('script, footer, header, nav, aside, .advertisement');
-  scripts.forEach(el => el.remove());
+  // Remove unwanted elements like navigation, footer, header, scripts, and ads
+  const unwantedSelectors = [
+    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
+  ];
+  
+  unwantedSelectors.forEach(selector => {
+    const elements = body.querySelectorAll(selector);
+    elements.forEach(el => el.remove());
+  });
 
-  // You can add more selectors if there are other unwanted elements to remove.
+  // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
+  const spans = body.querySelectorAll('span');
+  spans.forEach(span => span.remove());
 
-  return body.innerHTML; // Return cleaned HTML content
+  return body.innerHTML.trim(); // Return the cleaned HTML
 }
 
 module.exports = extractContent;
