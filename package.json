@@ -1,0 +1,14 @@
+{
+  "name": "mercury-parser-api",
+  "version": "1.0.0",
+  "description": "An API server for parsing articles using Mercury Parser",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@postlight/mercury-parser": "^2.2.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
