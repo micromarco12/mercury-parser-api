@@ -7,6 +7,8 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
+  // Log the time the file was last updated (to verify save time)
+  console.log('Server last updated at:', new Date().toLocaleString());
   res.send('Mercury Parser API is running!');
 });
 
@@ -26,6 +28,7 @@ app.get('/parser', async (req, res) => {
   }
 });
 
+// Ensure the app listens on the correct dynamic port
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, '0.0.0.0', () => {
