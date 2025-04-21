@@ -68,7 +68,12 @@ function cleanArticleContent(content) {
   const spans = body.querySelectorAll('span');
   spans.forEach(span => span.remove());
 
-  return body.innerHTML.trim(); // Return the cleaned HTML
+  // Clean up all line breaks and excess whitespace
+  let contentString = body.innerHTML.trim();
+  contentString = contentString.replace(/\n/g, ' ');  // Remove new line characters
+  contentString = contentString.replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+
+  return contentString;
 }
 
 module.exports = extractContent;
