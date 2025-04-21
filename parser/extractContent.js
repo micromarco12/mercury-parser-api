@@ -64,6 +64,13 @@ function cleanArticleContent(content) {
     elements.forEach(el => el.remove());
   });
 
+  // Remove image tags and links
+  const images = body.querySelectorAll('img');
+  images.forEach(img => img.remove());  // Remove images
+
+  const links = body.querySelectorAll('a');
+  links.forEach(link => link.remove());  // Remove links
+
   // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
   const spans = body.querySelectorAll('span');
   spans.forEach(span => span.remove());
