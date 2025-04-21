@@ -58,14 +58,15 @@ async function extractContent(url) {
   };
 }
 
-// Function to clean the extracted HTML
+// Function to clean the extracted HTML content
 function cleanArticleContent(content) {
   const doc = new JSDOM(content);
   const body = doc.window.document.body;
 
-  // Remove unwanted elements like navigation, footer, header, scripts, and ads
+  // Remove unwanted elements like navigation, footer, header, ads
   const unwantedSelectors = [
-    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
+    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments',
+    'img', 'video', 'iframe', // Remove embedded media like images, videos, and iframes
   ];
 
   unwantedSelectors.forEach(selector => {
@@ -73,11 +74,26 @@ function cleanArticleContent(content) {
     elements.forEach(el => el.remove());
   });
 
-  // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
-  const spans = body.querySelectorAll('span');
-  spans.forEach(span => span.remove());
+  // Remove links (e.g., [URL] or <a href=...>)
+  body.querySelectorAll('a').forEach(anchor => {
+    anchor.remove();
+  });
 
-  return body.innerHTML.trim(); // Return the cleaned HTML
+  // Remove any image tags or unnecessary spans (e.g., for ads or non-content formatting)
+  body.querySelectorAll('span').forEach(span => span.remove());
+  body.querySelectorAll('strong').forEach(strong => strong.remove()); // Optional: Remove strong/bold tags
+
+  // Remove any "empty" content (like empty divs, spans, etc.)
+  body.querySelectorAll('div').forEach(div => {
+    if (!div.textContent.trim()) {
+      div.remove();
+    }
+  });
+
+  // Remove specific image URLs (optional, can be useful if there are inline image URLs like /styleguide/assets/)
+  body.innerHTML = body.innerHTML.replace(/https?:\/\/[^\s]+\.jpg|\.png|\.jpeg|\.gif/g, '');
+
+  return body.innerHTML.trim(); // Return the cleaned-up content
 }
 
 module.exports = extractContent;
