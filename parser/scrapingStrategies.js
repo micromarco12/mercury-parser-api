@@ -1,13 +1,13 @@
-const customRules = {
-  'bbc.com': {
-    articleSelector: 'article',
-    contentSelector: '.ssrcss-1q0x1qg-Paragraph', // Example class for BBC
-  },
-  'nytimes.com': {
-    articleSelector: 'section',
-    contentSelector: '.css-1gb49c0', // Example class for NY Times
-  },
-  // Add more sites as needed
-};
+// scrapingStrategies.js
 
-module.exports = customRules;
+function applyCleaningStrategies(content) {
+  // Add more custom cleaning strategies here if necessary
+  content = content.replace(/<script[^>]*>(.*?)<\/script>/g, ''); // Remove JavaScript
+
+  // You can add more content transformations or additional cleanup logic
+  return content;
+}
+
+module.exports = {
+  applyCleaningStrategies
+};
