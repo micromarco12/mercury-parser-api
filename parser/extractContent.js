@@ -31,34 +31,20 @@ async function extractContent(url) {
   const dateMeta = document.querySelector('meta[property="article:published_time"], meta[name="pubdate"]');
   const date_published = dateMeta ? dateMeta.getAttribute('content') : '';
 
-  // Clean up the content after applying scraping strategies
+  // Extract lead image URL
+  const leadImageMeta = document.querySelector('meta[property="og:image"]');
+  const lead_image_url = leadImageMeta ? leadImageMeta.getAttribute('content') : '';
+
+  // Optionally apply extra cleaning strategies defined in scrapingStrategies.js
   const cleanContent = scrapingStrategies.applyCleaningStrategies(content);
 
-  // Collect all fields that might be included in the response
-  const result = {
+  return {
     title,
     content: cleanContent,
     author,
     date_published,
-    lead_image_url: '', // Empty string will be removed if not filled
-    dek: '',            // Empty string will be removed if not filled
-    url,
-    domain: '',
-    excerpt: '',
-    word_count: cleanContent ? cleanContent.split(' ').length : 0,
-    direction: 'ltr',
-    total_pages: 1,
-    rendered_pages: 1
+    lead_image_url
   };
-
-  // Remove any fields that are empty or null
-  Object.keys(result).forEach(key => {
-    if (!result[key] && result[key] !== 0) { // Removes empty, null, or undefined fields
-      delete result[key];
-    }
-  });
-
-  return result;
 }
 
 // Function to clean the extracted HTML
