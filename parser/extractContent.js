@@ -1,6 +1,5 @@
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
-const scrapingStrategies = require('./scrapingStrategies');
 
 async function extractContent(url) {
   const fetch = (await import('node-fetch')).default;
@@ -31,8 +30,9 @@ async function extractContent(url) {
   const dateMeta = document.querySelector('meta[property="article:published_time"], meta[name="pubdate"]');
   const date_published = dateMeta ? dateMeta.getAttribute('content') : '';
 
-  // Clean up the content after applying scraping strategies
-  const cleanContent = scrapingStrategies.applyCleaningStrategies(content);
+  // Extract lead image URL
+  const leadImageMeta = document.querySelector('meta[property="og:image"]');
+  const lead_image_url = leadImageMeta ? leadImageMeta.getAttribute('content') : '';
 
   // Collect all fields that might be included in the response
   const result = {
@@ -40,20 +40,20 @@ async function extractContent(url) {
     content: cleanContent,
     author,
     date_published,
-    lead_image_url: '', // Empty string will be removed if not filled
-    dek: '',            // Empty string will be removed if not filled
+    lead_image_url: lead_image_url || undefined, // Set to undefined if empty
+    dek: '', // Set to an empty string if not available
     url,
     domain: '',
     excerpt: '',
-    word_count: cleanContent ? cleanContent.split(' ').length : 0,
+    word_count: content ? content.split(' ').length : 0,
     direction: 'ltr',
     total_pages: 1,
     rendered_pages: 1
   };
 
-  // Remove any fields that are empty or null
+  // Remove any fields that are empty or undefined
   Object.keys(result).forEach(key => {
-    if (!result[key] && result[key] !== 0) { // Removes empty, null, or undefined fields
+    if (result[key] === '' || result[key] === undefined || result[key] === null) {
       delete result[key];
     }
   });
@@ -68,38 +68,19 @@ function cleanArticleContent(content) {
 
   // Remove unwanted elements like navigation, footer, header, scripts, and ads
   const unwantedSelectors = [
-    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments', '.sponsored'
+    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
   ];
-
+  
   unwantedSelectors.forEach(selector => {
     const elements = body.querySelectorAll(selector);
     elements.forEach(el => el.remove());
   });
 
-  // Remove image tags, links, and any unwanted inline content like emojis or broken content
-  const images = body.querySelectorAll('img');
-  images.forEach(img => img.remove());  // Remove images
-
-  const links = body.querySelectorAll('a');
-  links.forEach(link => link.remove());  // Remove links
-
-  // Clean up empty or redundant HTML elements
-  const emptyElements = body.querySelectorAll('*:empty');
-  emptyElements.forEach(el => el.remove());
-
   // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
   const spans = body.querySelectorAll('span');
   spans.forEach(span => span.remove());
 
-  // Clean up all line breaks and excess whitespace
-  let contentString = body.innerHTML.trim();
-  contentString = contentString.replace(/\n/g, ' ');  // Remove new line characters
-  contentString = contentString.replace(/\s+/g, ' '); // Replace multiple spaces with a single space
-
-  // Replace any lingering placeholder content (like "Pope Francis" or other test messages)
-  contentString = contentString.replace(/Pope Francis.+?88/g, '');  // Remove example phrases
-
-  return contentString;
+  return body.innerHTML.trim(); // Return the cleaned HTML
 }
 
 module.exports = extractContent;
