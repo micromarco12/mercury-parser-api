@@ -29,7 +29,7 @@ app.get('/parser', async (req, res) => {
 });
 
 // Ensure the app listens on the correct dynamic port
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 1000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
