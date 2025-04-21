@@ -1,5 +1,5 @@
 const express = require('express');
-const mercury = require('@postlight/mercury-parser');
+const mercury = require('./parser');
 const cors = require('cors');
 
 const app = express();
