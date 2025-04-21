@@ -1,6 +1,9 @@
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
 
+// Import scraping strategies to refine the scraping method
+const scrapingStrategies = require('./scrapingStrategies');
+
 async function extractContent(url) {
   const fetch = (await import('node-fetch')).default;
   const response = await fetch(url);
@@ -17,10 +20,10 @@ async function extractContent(url) {
   const title = document.querySelector('title')?.textContent || 'No title available';
 
   // Try extracting the main content by looking for <article>, <main>, or <body>
-  const content = document.querySelector('article') || document.querySelector('main') || document.body;
+  let content = document.querySelector('article') || document.querySelector('main') || document.body;
 
   // Clean the content to remove unwanted sections like navigation, ads, and other elements
-  const cleanContent = cleanArticleContent(content.innerHTML);
+  content = cleanArticleContent(content.innerHTML);
 
   // Extract author, if available
   const authorMeta = document.querySelector('meta[name="author"]');
@@ -33,6 +36,9 @@ async function extractContent(url) {
   // Extract lead image URL
   const leadImageMeta = document.querySelector('meta[property="og:image"]');
   const lead_image_url = leadImageMeta ? leadImageMeta.getAttribute('content') : '';
+
+  // You can use scraping strategies here to determine if extra cleaning or modifications are needed
+  const cleanContent = scrapingStrategies.applyCleaningStrategies(content);
 
   return {
     title,
@@ -48,10 +54,9 @@ function cleanArticleContent(content) {
   const doc = new JSDOM(content);
   const body = doc.window.document.body;
 
-  // Remove unwanted elements like navigation, footer, header, scripts, ads, etc.
+  // Remove unwanted elements like navigation, footer, header, scripts, and ads
   const unwantedSelectors = [
-    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments',
-    'img', 'video', 'iframe', 'svg', 'picture' // Remove media and non-content elements
+    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
   ];
 
   unwantedSelectors.forEach(selector => {
@@ -59,37 +64,11 @@ function cleanArticleContent(content) {
     elements.forEach(el => el.remove());
   });
 
-  // Remove any anchor tags (links)
-  body.querySelectorAll('a').forEach(anchor => {
-    anchor.remove();
-  });
+  // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
+  const spans = body.querySelectorAll('span');
+  spans.forEach(span => span.remove());
 
-  // Remove unnecessary inline styles, spans, and divs
-  body.querySelectorAll('span').forEach(span => span.remove());
-  body.querySelectorAll('div').forEach(div => {
-    if (!div.textContent.trim()) { // Remove empty divs
-      div.remove();
-    }
-  });
-
-  // Remove images but leave the alt text (if needed, otherwise remove the entire tag)
-  body.querySelectorAll('img').forEach(img => img.remove());
-
-  // Optionally remove all bold (strong) tags, or replace them with text
-  body.querySelectorAll('strong').forEach(strong => strong.replaceWith(strong.textContent));
-
-  // Remove empty paragraphs or content blocks
-  body.querySelectorAll('p').forEach(p => {
-    if (!p.textContent.trim()) {
-      p.remove();
-    }
-  });
-
-  // Clean up any unnecessary non-text elements like ad-related content
-  body.innerHTML = body.innerHTML.replace(/https?:\/\/[^\s]+\.jpg|\.png|\.jpeg|\.gif/g, ''); // Remove image URLs
-
-  // Return the cleaned HTML as text
-  return body.textContent.trim(); // Extract the clean text content
+  return body.innerHTML.trim(); // Return the cleaned HTML
 }
 
 module.exports = extractContent;
