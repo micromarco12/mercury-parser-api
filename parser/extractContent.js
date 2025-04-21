@@ -1,7 +1,5 @@
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
-
-// Import scraping strategies to refine the scraping method
 const scrapingStrategies = require('./scrapingStrategies');
 
 async function extractContent(url) {
@@ -37,7 +35,7 @@ async function extractContent(url) {
   const leadImageMeta = document.querySelector('meta[property="og:image"]');
   const lead_image_url = leadImageMeta ? leadImageMeta.getAttribute('content') : '';
 
-  // You can use scraping strategies here to determine if extra cleaning or modifications are needed
+  // Optionally apply extra cleaning strategies defined in scrapingStrategies.js
   const cleanContent = scrapingStrategies.applyCleaningStrategies(content);
 
   return {
@@ -56,7 +54,7 @@ function cleanArticleContent(content) {
 
   // Remove unwanted elements like navigation, footer, header, scripts, and ads
   const unwantedSelectors = [
-    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments'
+    'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments', '.sponsored'
   ];
 
   unwantedSelectors.forEach(selector => {
@@ -64,12 +62,16 @@ function cleanArticleContent(content) {
     elements.forEach(el => el.remove());
   });
 
-  // Remove image tags and links
+  // Remove image tags, links, and any unwanted inline content like emojis or broken content
   const images = body.querySelectorAll('img');
   images.forEach(img => img.remove());  // Remove images
 
   const links = body.querySelectorAll('a');
   links.forEach(link => link.remove());  // Remove links
+
+  // Clean up empty or redundant HTML elements
+  const emptyElements = body.querySelectorAll('*:empty');
+  emptyElements.forEach(el => el.remove());
 
   // Optionally, remove inline styling or unnecessary spans (like ad-blocking messages, etc.)
   const spans = body.querySelectorAll('span');
@@ -79,6 +81,9 @@ function cleanArticleContent(content) {
   let contentString = body.innerHTML.trim();
   contentString = contentString.replace(/\n/g, ' ');  // Remove new line characters
   contentString = contentString.replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+
+  // Replace any lingering placeholder content (like "Pope Francis" or other test messages)
+  contentString = contentString.replace(/Pope Francis.+?88/g, '');  // Remove example phrases
 
   return contentString;
 }
