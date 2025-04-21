@@ -1,6 +1,5 @@
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
-const customRules = require('./scrapingStrategies'); // Import site-specific scraping rules
 
 async function extractContent(url) {
   const fetch = (await import('node-fetch')).default;
@@ -14,28 +13,14 @@ async function extractContent(url) {
   const dom = new JSDOM(html, { url });
   const document = dom.window.document;
 
-  // Get the hostname from the URL to apply the site-specific rules
-  const hostname = new URL(url).hostname;
-
-  // Check if there are custom rules for this site
-  const rules = customRules[hostname];
-
-  let content;
-
-  if (rules) {
-    // Use site-specific selectors if available
-    const articleContent = document.querySelector(rules.articleSelector);
-    content = articleContent ? articleContent.querySelector(rules.contentSelector).innerHTML : '';
-  } else {
-    // Default content extraction if no specific rules are found
-    content = document.querySelector('article') || document.querySelector('main') || document.body;
-  }
-
-  // Clean the extracted content to remove unwanted sections
-  const cleanContent = cleanArticleContent(content.innerHTML);
-
   // Extract title
   const title = document.querySelector('title')?.textContent || 'No title available';
+
+  // Try extracting the main content by looking for <article>, <main>, or <body>
+  const content = document.querySelector('article') || document.querySelector('main') || document.body;
+
+  // Clean the content to remove unwanted sections like navigation, ads, and other elements
+  const cleanContent = cleanArticleContent(content.innerHTML);
 
   // Extract author, if available
   const authorMeta = document.querySelector('meta[name="author"]');
@@ -58,15 +43,15 @@ async function extractContent(url) {
   };
 }
 
-// Function to clean the extracted HTML content
+// Function to clean the extracted HTML
 function cleanArticleContent(content) {
   const doc = new JSDOM(content);
   const body = doc.window.document.body;
 
-  // Remove unwanted elements like navigation, footer, header, ads
+  // Remove unwanted elements like navigation, footer, header, scripts, ads, etc.
   const unwantedSelectors = [
     'header', 'footer', 'nav', 'aside', 'script', 'advertisement', '.sidebar', '.social-links', '.related-articles', '.comments',
-    'img', 'video', 'iframe', // Remove embedded media like images, videos, and iframes
+    'img', 'video', 'iframe', 'svg', 'picture' // Remove media and non-content elements
   ];
 
   unwantedSelectors.forEach(selector => {
@@ -74,26 +59,37 @@ function cleanArticleContent(content) {
     elements.forEach(el => el.remove());
   });
 
-  // Remove links (e.g., [URL] or <a href=...>)
+  // Remove any anchor tags (links)
   body.querySelectorAll('a').forEach(anchor => {
     anchor.remove();
   });
 
-  // Remove any image tags or unnecessary spans (e.g., for ads or non-content formatting)
+  // Remove unnecessary inline styles, spans, and divs
   body.querySelectorAll('span').forEach(span => span.remove());
-  body.querySelectorAll('strong').forEach(strong => strong.remove()); // Optional: Remove strong/bold tags
-
-  // Remove any "empty" content (like empty divs, spans, etc.)
   body.querySelectorAll('div').forEach(div => {
-    if (!div.textContent.trim()) {
+    if (!div.textContent.trim()) { // Remove empty divs
       div.remove();
     }
   });
 
-  // Remove specific image URLs (optional, can be useful if there are inline image URLs like /styleguide/assets/)
-  body.innerHTML = body.innerHTML.replace(/https?:\/\/[^\s]+\.jpg|\.png|\.jpeg|\.gif/g, '');
+  // Remove images but leave the alt text (if needed, otherwise remove the entire tag)
+  body.querySelectorAll('img').forEach(img => img.remove());
 
-  return body.innerHTML.trim(); // Return the cleaned-up content
+  // Optionally remove all bold (strong) tags, or replace them with text
+  body.querySelectorAll('strong').forEach(strong => strong.replaceWith(strong.textContent));
+
+  // Remove empty paragraphs or content blocks
+  body.querySelectorAll('p').forEach(p => {
+    if (!p.textContent.trim()) {
+      p.remove();
+    }
+  });
+
+  // Clean up any unnecessary non-text elements like ad-related content
+  body.innerHTML = body.innerHTML.replace(/https?:\/\/[^\s]+\.jpg|\.png|\.jpeg|\.gif/g, ''); // Remove image URLs
+
+  // Return the cleaned HTML as text
+  return body.textContent.trim(); // Extract the clean text content
 }
 
 module.exports = extractContent;
