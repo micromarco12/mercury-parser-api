@@ -7,8 +7,6 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  // Log the time the file was last updated (to verify save time)
-  console.log('Server last updated at:', new Date().toLocaleString());
   res.send('Mercury Parser API is running!');
 });
 
@@ -24,13 +22,13 @@ app.get('/parser', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error parsing URL:', error);
-    res.status(500).json({ error: 'Failed to parse the article' });
+    res.status(500).json({ error: 'Failed to parse article' });
   }
 });
 
 // Ensure the app listens on the correct dynamic port
-const PORT = process.env.PORT || 1000;
+const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
